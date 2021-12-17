@@ -30,6 +30,7 @@ import com.tencent.rss.common.PartitionRange;
 import com.tencent.rss.common.ShuffleAssignmentsInfo;
 import com.tencent.rss.common.ShuffleBlockInfo;
 import com.tencent.rss.common.ShuffleServerInfo;
+import com.tencent.rss.common.exception.RssException;
 import com.tencent.rss.common.util.Constants;
 import java.util.List;
 import java.util.Map;
@@ -330,16 +331,6 @@ public class RssShuffleManager implements ShuffleManager {
     return eventLoop;
   }
 
-  private Iterator<Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>>> getMapStatusIter(
-    int shuffleId, int startPartition, int endPartition) {
-    Object iter = SparkEnv.get().mapOutputTracker()
-      .getMapSizesByExecutorId(shuffleId, startPartition, endPartition);
-    //if (iter instanceof Iterator<Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>>>)
-    //  return iter.
-
-    return null;
-  }
-
   @VisibleForTesting
   public void setEventLoop(EventLoop<AddBlockEvent> eventLoop) {
     this.eventLoop = eventLoop;
@@ -350,7 +341,8 @@ public class RssShuffleManager implements ShuffleManager {
   private Roaring64NavigableMap getExpectedTasks(int shuffleId, int startPartition, int endPartition) {
     Roaring64NavigableMap taskIdBitmap = Roaring64NavigableMap.bitmapOf();
     Iterator<Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>>> mapStatusIter =
-        SparkEnv.get().mapOutputTracker().getMapSizesByExecutorId(shuffleId, startPartition, endPartition);
+        SparkEnv.get().mapOutputTracker().getMapSizesByExecutorId(shuffleId, startPartition, endPartition)
+          .toIterator();
     while (mapStatusIter.hasNext()) {
       Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>> tuple2 = mapStatusIter.next();
       Option<String> topologyInfo = tuple2._1().topologyInfo();
