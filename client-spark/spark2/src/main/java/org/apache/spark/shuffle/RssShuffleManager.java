@@ -330,6 +330,16 @@ public class RssShuffleManager implements ShuffleManager {
     return eventLoop;
   }
 
+  private Iterator<Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>>> getMapStatusIter(
+    int shuffleId, int startPartition, int endPartition) {
+    Object iter = SparkEnv.get().mapOutputTracker()
+      .getMapSizesByExecutorId(shuffleId, startPartition, endPartition);
+    //if (iter instanceof Iterator<Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>>>)
+    //  return iter.
+
+    return null;
+  }
+
   @VisibleForTesting
   public void setEventLoop(EventLoop<AddBlockEvent> eventLoop) {
     this.eventLoop = eventLoop;
@@ -341,7 +351,6 @@ public class RssShuffleManager implements ShuffleManager {
     Roaring64NavigableMap taskIdBitmap = Roaring64NavigableMap.bitmapOf();
     Iterator<Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>>> mapStatusIter =
         SparkEnv.get().mapOutputTracker().getMapSizesByExecutorId(shuffleId, startPartition, endPartition);
-
     while (mapStatusIter.hasNext()) {
       Tuple2<BlockManagerId, Seq<Tuple2<BlockId, Object>>> tuple2 = mapStatusIter.next();
       Option<String> topologyInfo = tuple2._1().topologyInfo();
