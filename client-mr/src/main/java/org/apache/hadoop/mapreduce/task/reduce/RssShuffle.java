@@ -128,7 +128,7 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
   protected MergeManager<K, V> createMergeManager(
     ShuffleConsumerPlugin.Context context) {
     return new MergeManagerImpl<K, V>(reduceId, mrJobConf, context.getLocalFS(),
-      context.getLocalDirAllocator(), reporter, context.getCodec(),
+      context.getLocalDirAllocator(), reporter, null,
       context.getCombinerClass(), context.getCombineCollector(),
       context.getSpilledRecordsCounter(),
       context.getReduceCombineInputCounter(),
