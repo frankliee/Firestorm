@@ -478,7 +478,7 @@ public class ShuffleServerGrpcService extends ShuffleServerImplBase {
       } catch (Exception e) {
         status = StatusCode.INTERNAL_ERROR;
         msg = "Error happened when get shuffle index for " + requestInfo + ", " + e.getMessage();
-        LOG.error(msg, e);
+        LOG.warn(msg, e);
         reply = GetLocalShuffleIndexResponse.newBuilder()
             .setStatus(valueOf(status))
             .setRetMsg(msg)
