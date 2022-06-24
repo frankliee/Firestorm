@@ -228,6 +228,9 @@ The important configuration is listed as following.
 |spark.rss.client.send.size.limit|16m|The max data size sent to shuffle server|
 |spark.rss.client.read.buffer.size|32m|The max data size read from storage|
 |spark.rss.client.send.threadPool.size|10|The thread size for send shuffle data to shuffle server|
+|spark.rss.data.replica|1|The max server number that each block can be send by client in quorum protocol|
+|spark.rss.data.replica.write|1|The min server number that each block should be send by client successfully|
+|spark.rss.data.replica.read|1|The min server number that metadata should be fetched by client successfully (Notice: spark.rss.data.replica.write + spark.rss.data.replica.read > spark.rss.data.replica）|
 
 
 ### MapReduce Client
@@ -238,7 +241,9 @@ The important configuration is listed as following.
 |mapreduce.rss.storage.type|-|Supports MEMORY_LOCALFILE, MEMORY_HDFS, MEMORY_LOCALFILE_HDFS|
 |mapreduce.rss.client.max.buffer.size|3k|The max buffer size in map side|
 |mapreduce.rss.client.read.buffer.size|32m|The max data size read from storage|
-
+|mapreduce.rss.data.replica|1|The max server number that each block can be send by client in quorum protocol|
+|mapreduce.rss.data.replica.write|1|The min server number that each block should be send by client successfully|
+|mapreduce.rss.data.replica.read|1|The min server number that metadata should be fetched by client successfully (Notice: mapreduce.rss.data.replica.write + mapreduce.rss.data.replica.read > mapreduce.rss.data.replica）|
 ## LICENSE
 
 Firestorm is under the Apache License Version 2.0. See the [LICENSE](https://github.com/Tencent/Firestorm/blob/master/LICENSE) file for details.
