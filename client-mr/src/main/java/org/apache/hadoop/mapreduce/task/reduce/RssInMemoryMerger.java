@@ -93,6 +93,7 @@ public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>,
       return;
     }
 
+    long start = System.currentTimeMillis();
     TaskAttemptID mapId = inputs.get(0).getMapId();
 
     List<Merger.Segment<K, V>> inMemorySegments = new ArrayList<Merger.Segment<K, V>>();
@@ -128,11 +129,11 @@ public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>,
       }
       writer.close();
 
-      LOG.info(taskAttemptId +
-          " Merge of the " + noInMemorySegments
+      LOG.info(taskAttemptId + " Merge of the " + noInMemorySegments
           + " files in-memory complete."
           + " Local file is " + outputPath + " of size "
-          + remoteFs.getFileStatus(outputPath).getLen());
+          + remoteFs.getFileStatus(outputPath).getLen()
+          + " cost time " + (System.currentTimeMillis() - start) + " ms");
     } catch (IOException e) {
       //make sure that we delete the ondisk file that we created
       //earlier when we invoked cloneFileAttributes
