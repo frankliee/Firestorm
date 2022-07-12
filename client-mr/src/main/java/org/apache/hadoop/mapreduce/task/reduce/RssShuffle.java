@@ -127,13 +127,26 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
 
   protected MergeManager<K, V> createMergeManager(
     ShuffleConsumerPlugin.Context context) {
-    return new MergeManagerImpl<K, V>(reduceId, mrJobConf, context.getLocalFS(),
-      context.getLocalDirAllocator(), reporter, context.getCodec(),
-      context.getCombinerClass(), context.getCombineCollector(),
-      context.getSpilledRecordsCounter(),
-      context.getReduceCombineInputCounter(),
-      context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
-      context.getMapOutputFile());
+    boolean useRemoteSpill = RssMRUtils.getBoolean(rssJobConf, mrJobConf,
+      RssMRConfig.RSS_REDUCE_REMOTE_SPILL_ENABLED, RssMRConfig.RSS_REDUCE_REMOTE_SPILL_ENABLED_DEFAULT);
+    if (useRemoteSpill) {
+      return new RssRemoteMergeManagerImpl(reduceId, mrJobConf, context.getLocalFS(),
+        context.getLocalDirAllocator(), reporter, context.getCodec(),
+        context.getCombinerClass(), context.getCombineCollector(),
+        context.getSpilledRecordsCounter(),
+        context.getReduceCombineInputCounter(),
+        context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
+        context.getMapOutputFile()
+      );
+    } else {
+      return new MergeManagerImpl<K, V>(reduceId, mrJobConf, context.getLocalFS(),
+        context.getLocalDirAllocator(), reporter, context.getCodec(),
+        context.getCombinerClass(), context.getCombineCollector(),
+        context.getSpilledRecordsCounter(),
+        context.getReduceCombineInputCounter(),
+        context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
+        context.getMapOutputFile());
+    }
   }
 
   @Override
