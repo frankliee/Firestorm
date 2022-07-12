@@ -214,15 +214,45 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
   public synchronized MapOutput<K, V> reserve(TaskAttemptID mapId,
                                  long requestedSize,
                                  int fetcher) throws IOException {
-
     // todo: malloc full in-memory buffer to save fetched RSS data
-    return null;
+
+    // we disable OnDisk MapOutput to avoid
+
+    if (usedMemory > memoryLimit) {
+      LOG.debug(mapId + ": Stalling shuffle since usedMemory (" + usedMemory
+        + ") is greater than memoryLimit (" + memoryLimit + ")." +
+        " CommitMemory is (" + commitMemory + ")");
+      return null;
+    }
+
+    // Allow the in-memory shuffle to progress
+    LOG.debug(mapId + ": Proceeding with shuffle since usedMemory ("
+      + usedMemory + ") is lesser than memoryLimit (" + memoryLimit + ")."
+      + "CommitMemory is (" + commitMemory + ")");
+    usedMemory += requestedSize;
+    return new InMemoryMapOutput<K,V>(jobConf, mapId, this, (int)requestedSize, codec, true);
   }
 
   @Override
   public synchronized void closeInMemoryFile(InMemoryMapOutput<K,V> mapOutput) {
-
     // todo: check memory is full, then startMerge with RssInMemoryMerger
+
+    inMemoryMapOutputs.add(mapOutput);
+    LOG.info("closeInMemoryFile -> map-output of size: " + mapOutput.getSize()
+      + ", inMemoryMapOutputs.size() -> " + inMemoryMapOutputs.size()
+      + ", commitMemory -> " + commitMemory + ", usedMemory ->" + usedMemory);
+
+    commitMemory+= mapOutput.getSize();
+    // Can hang if mergeThreshold is really low.
+    if (commitMemory >= mergeThreshold) {
+      LOG.info("Starting inMemoryMerger's merge since commitMemory=" +
+        commitMemory + " > mergeThreshold=" + mergeThreshold +
+        ". Current usedMemory=" + usedMemory);
+      inMemoryMergedMapOutputs.clear();
+      inMemoryMerger.startMerge(inMemoryMapOutputs);
+      commitMemory = 0L;  // Reset commitMemory.
+    }
+    // we disable memToMemMerger to simplify design
   }
 
     @Override
