@@ -126,7 +126,7 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
         RssMRConfig.RSS_CLIENT_READ_BUFFER_SIZE_DEFAULT_VALUE));
     String remoteStorageConf = RssMRUtils.getString(rssJobConf, mrJobConf, RssMRConfig.RSS_REMOTE_STORAGE_CONF, "");
     this.remoteStorageInfo = new RemoteStorageInfo(basePath, remoteStorageConf);
-   }
+  }
 
   protected MergeManager<K, V> createMergeManager(
     ShuffleConsumerPlugin.Context context) {
@@ -141,7 +141,8 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
         context.getSpilledRecordsCounter(),
         context.getReduceCombineInputCounter(),
         context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
-        context.getMapOutputFile()
+        context.getMapOutputFile(),
+          getRemoteConf()
       );
     } else {
       return new MergeManagerImpl<K, V>(reduceId, mrJobConf, context.getLocalFS(),
@@ -183,12 +184,7 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
     if (!taskIdBitmap.isEmpty()) {
       LOG.info("In reduce: " + reduceId
         + ", Rss MR client starts to fetch blocks from RSS server");
-      JobConf readerJobConf = new JobConf((mrJobConf));
-      if (!remoteStorageInfo.isEmpty()) {
-        for (Map.Entry<String, String> entry : remoteStorageInfo.getConfItems().entrySet()) {
-          readerJobConf.set(entry.getKey(), entry.getValue());
-        }
-      }
+      JobConf readerJobConf = getRemoteConf();
       CreateShuffleReadClientRequest request = new CreateShuffleReadClientRequest(
         appId, 0, reduceId.getTaskID().getId(), storageType, basePath, indexReadLimit, readBufferSize,
         partitionNumPerRange, partitionNum, blockIdBitmap, taskIdBitmap, serverInfoList,
@@ -225,6 +221,16 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
       + ", Rss MR client returns sorted data to reduce successfully");
 
     return kvIter;
+  }
+
+  private JobConf getRemoteConf() {
+    JobConf readerJobConf = new JobConf((mrJobConf));
+    if (!remoteStorageInfo.isEmpty()) {
+      for (Map.Entry<String, String> entry : remoteStorageInfo.getConfItems().entrySet()) {
+        readerJobConf.set(entry.getKey(), entry.getValue());
+      }
+    }
+    return readerJobConf;
   }
 
   @Override

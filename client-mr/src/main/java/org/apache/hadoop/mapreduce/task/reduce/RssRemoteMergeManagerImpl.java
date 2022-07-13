@@ -119,7 +119,9 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
                               Counters.Counter reduceCombineInputCounter,
                               Counters.Counter mergedMapOutputsCounter,
                               ExceptionReporter exceptionReporter,
-                              Progress mergePhase, MapOutputFile mapOutputFile) {
+                              Progress mergePhase,
+                              MapOutputFile mapOutputFile,
+                              JobConf remoteConf) {
     super(reduceId,  jobConf,
       localFS,
       localDirAllocator,
@@ -150,7 +152,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     this.mapOutputFile.setConf(jobConf);
 
     try {
-      this.remoteFS = ShuffleStorageUtils.getFileSystemForPath(new Path(basePath), jobConf);
+      this.remoteFS = ShuffleStorageUtils.getFileSystemForPath(new Path(basePath), remoteConf);
     } catch (IOException e) {
       throw new RuntimeException("cannot ");
     }

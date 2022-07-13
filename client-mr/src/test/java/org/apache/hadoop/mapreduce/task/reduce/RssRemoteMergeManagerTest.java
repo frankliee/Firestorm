@@ -75,7 +75,7 @@ public class RssRemoteMergeManagerTest {
     RssRemoteMergeManagerImpl<Text, Text> mergeManager = new RssRemoteMergeManagerImpl<Text, Text>(
       appId, reduceId1, jobConf, tmpDir.toString(), fs, lda, Reporter.NULL,
       null, null, null, null, null,
-      null, null, new Progress(), new MROutputFiles());
+      null, null, new Progress(), new MROutputFiles(), new JobConf());
 
     // write map outputs
     Map<String, String> map1 = new TreeMap<String, String>();
