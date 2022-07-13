@@ -18,13 +18,17 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.tencent.rss.storage.util.ShuffleStorageUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -48,6 +52,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
   private static final float DEFAULT_SHUFFLE_MEMORY_LIMIT_PERCENT
     = 0.25f;
 
+  private final String appId;
   private final TaskAttemptID reduceId;
 
   private final JobConf jobConf;
@@ -59,9 +64,11 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
 
   Set<InMemoryMapOutput<K, V>> inMemoryMapOutputs =
     new TreeSet<InMemoryMapOutput<K,V>>(new MapOutput.MapOutputComparator<K, V>());
-  private final MergeThread<InMemoryMapOutput<K,V>, K,V> inMemoryMerger;
+  private final RssInMemoryMerger<K, V> inMemoryMerger;
 
   Set<CompressAwarePath> onDiskMapOutputs = new TreeSet<CompressAwarePath>();
+  Set<Path> onHDFSMapOutputs = new TreeSet<Path>();
+
 
   @VisibleForTesting
   final long memoryLimit;
@@ -100,7 +107,11 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
 
   private final Progress mergePhase;
 
-  public RssRemoteMergeManagerImpl(TaskAttemptID reduceId, JobConf jobConf,
+  private String basePath;
+  private FileSystem remoteFS;
+
+  public RssRemoteMergeManagerImpl(String appId, TaskAttemptID reduceId, JobConf jobConf,
+                              String basePath,
                               FileSystem localFS,
                               LocalDirAllocator localDirAllocator,
                               Reporter reporter,
@@ -126,6 +137,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
       mergePhase, mapOutputFile);
     // todo: clean code
 
+    this.appId = appId;
     this.reduceId = reduceId;
     this.jobConf = jobConf;
     this.localDirAllocator = localDirAllocator;
@@ -143,6 +155,8 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
 
     this.localFS = localFS;
     this.rfs = ((LocalFileSystem)localFS).getRaw();
+
+    this.basePath = basePath;
 
     final float maxInMemCopyUse =
       jobConf.getFloat(MRJobConfig.SHUFFLE_INPUT_BUFFER_PERCENT,
@@ -204,10 +218,28 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     this.mergePhase = mergePhase;
   }
 
-  protected MergeThread<InMemoryMapOutput<K,V>, K,V> createRssInMemoryMerger() {
+  void init() throws IOException {
+    this.remoteFS = ShuffleStorageUtils.getFileSystemForPath(new Path(basePath), jobConf);
+  }
+
+  protected RssInMemoryMerger<K, V> createRssInMemoryMerger() {
 
     // todo: create RssInMemoryMerger
-    return null;
+    return new RssInMemoryMerger<K, V>(
+      this,
+      jobConf,
+      remoteFS,
+      new Path(basePath, appId),
+      reduceId.toString(),
+      codec,
+      reporter,
+      spilledRecordsCounter,
+      combinerClass,
+      exceptionReporter,
+      combineCollector,
+      reduceCombineInputCounter,
+      mergedMapOutputsCounter
+    );
   }
 
   @Override
@@ -230,6 +262,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
       + usedMemory + ") is lesser than memoryLimit (" + memoryLimit + ")."
       + "CommitMemory is (" + commitMemory + ")");
     usedMemory += requestedSize;
+    // use this rss merger as the callback
     return new InMemoryMapOutput<K,V>(jobConf, mapId, this, (int)requestedSize, codec, true);
   }
 
@@ -255,9 +288,29 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     // we disable memToMemMerger to simplify design
   }
 
+  public synchronized void closeOnHDFSFile(Path file) {
+    onHDFSMapOutputs.add(file);
+  }
+
     @Override
   public RawKeyValueIterator close() throws Throwable {
-    // todo: return rssFinalMerge(in-memory, hdfs)
+    // Wait for on-going merges to complete
+    inMemoryMerger.close();
+
+    List<InMemoryMapOutput<K, V>> memory =
+      new ArrayList<InMemoryMapOutput<K, V>>(inMemoryMergedMapOutputs);
+    inMemoryMergedMapOutputs.clear();
+    memory.addAll(inMemoryMapOutputs);
+    inMemoryMapOutputs.clear();
+    List<Path> hdfs = new ArrayList<Path>(onHDFSMapOutputs);
+    onHDFSMapOutputs.clear();
+    return finalMerge(jobConf, remoteFS, memory, hdfs);
+  }
+
+  private RawKeyValueIterator finalMerge(JobConf job, FileSystem remoteFS,
+                                         List<InMemoryMapOutput<K,V>> inMemoryMapOutputs,
+                                         List<Path> onHDFSMapOutputs) throws IOException {
+    // todo
     return null;
   }
 }

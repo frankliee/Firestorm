@@ -24,8 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.tencent.rss.storage.util.ShuffleStorageUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.Reporter;
@@ -130,7 +133,9 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
     boolean useRemoteSpill = RssMRUtils.getBoolean(rssJobConf, mrJobConf,
       RssMRConfig.RSS_REDUCE_REMOTE_SPILL_ENABLED, RssMRConfig.RSS_REDUCE_REMOTE_SPILL_ENABLED_DEFAULT);
     if (useRemoteSpill) {
-      return new RssRemoteMergeManagerImpl(reduceId, mrJobConf, context.getLocalFS(),
+      return new RssRemoteMergeManagerImpl(appId, reduceId, mrJobConf,
+        basePath,
+        context.getLocalFS(),
         context.getLocalDirAllocator(), reporter, context.getCodec(),
         context.getCombinerClass(), context.getCombineCollector(),
         context.getSpilledRecordsCounter(),
@@ -151,6 +156,11 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
 
   @Override
   public RawKeyValueIterator run() throws IOException, InterruptedException {
+
+    // init hdfs fs may cause IOException
+    if (merger instanceof RssRemoteMergeManagerImpl) {
+      ((RssRemoteMergeManagerImpl<K, V>) merger).init();
+    }
 
     // get assigned RSS servers
     Set<ShuffleServerInfo> serverInfoSet = RssMRUtils.getAssignedServers(rssJobConf,
