@@ -109,6 +109,15 @@ public class RssRemoteMergeManagerTest {
     for (int i = 0; i < 3; i++) {
       assertEquals(keys.get(i), actualKeys.get(i));
       assertEquals(values.get(i), actualValues.get(i));
+
+      // test final returned values
+      iterator.next();
+      byte[] key = new byte[iterator.getKey().getLength()];
+      byte[] value = new byte[iterator.getValue().getLength()];
+      System.arraycopy(iterator.getKey().getData(), 0, key, 0, key.length);
+      System.arraycopy(iterator.getValue().getData(), 0, value, 0, value.length);
+      assertEquals(new Text(key).toString().trim(), actualKeys.get(i));
+      assertEquals(new Text(value).toString().trim(), actualValues.get(i));
     }
   }
 

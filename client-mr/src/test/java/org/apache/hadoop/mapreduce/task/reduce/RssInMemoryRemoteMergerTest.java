@@ -18,7 +18,6 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -51,7 +50,7 @@ import java.util.TreeMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class RssInMemoryMergerTest {
+public class RssInMemoryRemoteMergerTest {
 
   @Test
   public void mergerTest() throws IOException {
@@ -89,7 +88,7 @@ public class RssInMemoryMergerTest {
 
     Path spillPath = new Path("test");
     MergeThread<InMemoryMapOutput<Text, Text>, Text, Text> inMemoryMerger =
-        new RssInMemoryMerger<Text, Text>(mergeManager, jobConf, fs, spillPath,
+        new RssInMemoryRemoteMerger<Text, Text>(mergeManager, jobConf, fs, spillPath,
             "test", null, Reporter.NULL, null,
             null, null, null, null, null);
     List<InMemoryMapOutput<Text, Text>> mapOutputs1 =

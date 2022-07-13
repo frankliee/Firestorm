@@ -20,8 +20,6 @@ package org.apache.hadoop.mapreduce.task.reduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -44,8 +42,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 
 
-public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>, K, V> {
-  private static final Log LOG = LogFactory.getLog(RssInMemoryMerger.class);
+public class RssInMemoryRemoteMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>, K, V> {
+  private static final Log LOG = LogFactory.getLog(RssInMemoryRemoteMerger.class);
 
   private final RssRemoteMergeManagerImpl<K, V> manager;
   private final JobConf jobConf;
@@ -60,7 +58,7 @@ public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>,
   private final Counters.Counter reduceCombineInputCounter;
   private final Counters.Counter mergedMapOutputsCounter;
 
-  public RssInMemoryMerger(
+  public RssInMemoryRemoteMerger(
       RssRemoteMergeManagerImpl<K, V> manager,
       JobConf jobConf,
       FileSystem remoteFs,
