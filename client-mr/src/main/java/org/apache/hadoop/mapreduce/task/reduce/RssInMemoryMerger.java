@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce.task.reduce;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -45,6 +47,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>, K, V> {
   private static final Log LOG = LogFactory.getLog(RssInMemoryMerger.class);
 
+  private final RssRemoteMergeManagerImpl<K, V> manager;
   private final JobConf jobConf;
   private final FileSystem remoteFs;
   private final Path spillPath;
@@ -58,7 +61,7 @@ public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>,
   private final Counters.Counter mergedMapOutputsCounter;
 
   public RssInMemoryMerger(
-      MergeManagerImpl<K, V> manager,
+      RssRemoteMergeManagerImpl<K, V> manager,
       JobConf jobConf,
       FileSystem remoteFs,
       Path spillPath,
@@ -74,6 +77,7 @@ public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>,
     super(manager, Integer.MAX_VALUE, exceptionReporter);
     this.setName("RssInMemoryMerger - Thread to merge in-memory map-outputs");
     this.setDaemon(true);
+    this.manager = manager;
     this.jobConf = jobConf;
     this.remoteFs = remoteFs;
     this.spillPath = spillPath;
@@ -128,6 +132,9 @@ public class RssInMemoryMerger<K, V> extends MergeThread<InMemoryMapOutput<K,V>,
         combineAndSpill(rIter, reduceCombineInputCounter);
       }
       writer.close();
+
+      // keep this for final merge
+      manager.closeOnHDFSFile(outputPath);
 
       LOG.info(taskAttemptId + " Merge of the " + noInMemorySegments
           + " files in-memory complete."

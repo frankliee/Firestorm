@@ -65,8 +65,9 @@ public class RssInMemoryMergerTest {
         new TaskID(jobId, TaskType.MAP, 2), 0);
     TaskAttemptID reduceId1 = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 0), 0);
-    MergeManagerImpl<Text, Text> mergeManager = new MergeManagerImpl<Text, Text>(
-        reduceId1, jobConf, fs, lda, Reporter.NULL, null, null, null, null, null,
+    RssRemoteMergeManagerImpl<Text, Text> mergeManager = new RssRemoteMergeManagerImpl<Text, Text>(
+        "app", reduceId1, jobConf, "hdfs://xxx/yyy", fs, lda, Reporter.NULL,
+      null, null, null, null, null,
         null, null, new Progress(), new MROutputFiles());
 
     // write map outputs
