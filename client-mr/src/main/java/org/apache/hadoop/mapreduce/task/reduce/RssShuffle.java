@@ -157,11 +157,6 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
   @Override
   public RawKeyValueIterator run() throws IOException, InterruptedException {
 
-    // init hdfs fs may cause IOException
-    if (merger instanceof RssRemoteMergeManagerImpl) {
-      ((RssRemoteMergeManagerImpl<K, V>) merger).init();
-    }
-
     // get assigned RSS servers
     Set<ShuffleServerInfo> serverInfoSet = RssMRUtils.getAssignedServers(rssJobConf,
         reduceId.getTaskID().getId());

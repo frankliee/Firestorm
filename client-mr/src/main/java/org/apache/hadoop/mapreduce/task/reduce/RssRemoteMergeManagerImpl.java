@@ -153,6 +153,12 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     this.mapOutputFile = mapOutputFile;
     this.mapOutputFile.setConf(jobConf);
 
+    try {
+      this.remoteFS = ShuffleStorageUtils.getFileSystemForPath(new Path(basePath), jobConf);
+    } catch (IOException e) {
+      throw new RuntimeException("cannot ");
+    }
+
     this.localFS = localFS;
     this.rfs = ((LocalFileSystem)localFS).getRaw();
 
@@ -218,9 +224,6 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     this.mergePhase = mergePhase;
   }
 
-  void init() throws IOException {
-    this.remoteFS = ShuffleStorageUtils.getFileSystemForPath(new Path(basePath), jobConf);
-  }
 
   protected RssInMemoryMerger<K, V> createRssInMemoryMerger() {
 
