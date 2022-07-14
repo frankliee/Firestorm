@@ -142,7 +142,7 @@ public class RssShuffle<K, V> implements ShuffleConsumerPlugin<K, V>, ExceptionR
         context.getReduceCombineInputCounter(),
         context.getMergedMapOutputsCounter(), this, context.getMergePhase(),
         context.getMapOutputFile(),
-          getRemoteConf()
+        getRemoteConf()
       );
     } else {
       return new MergeManagerImpl<K, V>(reduceId, mrJobConf, context.getLocalFS(),

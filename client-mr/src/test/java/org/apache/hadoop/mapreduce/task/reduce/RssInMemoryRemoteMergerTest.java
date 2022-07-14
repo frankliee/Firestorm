@@ -18,6 +18,7 @@
 package org.apache.hadoop.mapreduce.task.reduce;
 
 import com.google.common.collect.Lists;
+import com.google.common.io.Files;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -41,6 +42,7 @@ import org.apache.hadoop.util.Progress;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +59,8 @@ public class RssInMemoryRemoteMergerTest {
     JobConf jobConf = new JobConf();
     FileSystem fs = FileSystem.getLocal(jobConf);
     LocalDirAllocator lda = new LocalDirAllocator(MRConfig.LOCAL_DIR);
+    File tmpDir = Files.createTempDir();
+    tmpDir.deleteOnExit();
     JobID jobId = new JobID("a", 0);
     TaskAttemptID mapId1 = new TaskAttemptID(
         new TaskID(jobId, TaskType.MAP, 1), 0);
@@ -65,7 +69,7 @@ public class RssInMemoryRemoteMergerTest {
     TaskAttemptID reduceId1 = new TaskAttemptID(
         new TaskID(jobId, TaskType.REDUCE, 0), 0);
     RssRemoteMergeManagerImpl<Text, Text> mergeManager = new RssRemoteMergeManagerImpl<Text, Text>(
-        "app", reduceId1, jobConf, "hdfs://xxx/yyy", fs, lda, Reporter.NULL,
+        "app", reduceId1, jobConf, tmpDir.toString(), fs, lda, Reporter.NULL,
       null, null, null, null, null,
         null, null, new Progress(), new MROutputFiles(), new JobConf());
 

@@ -154,7 +154,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     try {
       this.remoteFS = ShuffleStorageUtils.getFileSystemForPath(new Path(basePath), remoteConf);
     } catch (IOException e) {
-      throw new RuntimeException("cannot ");
+      throw new RuntimeException("Cannot init remoteFS on path:" + basePath);
     }
 
     this.basePath = basePath;
