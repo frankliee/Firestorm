@@ -73,13 +73,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
   private long usedMemory;
   private long commitMemory;
 
-  @VisibleForTesting
-  final long maxSingleShuffleLimit;
-
-  private final int memToMemMergeOutputsThreshold;
   private final long mergeThreshold;
-
-  private final int ioSortFactor;
 
   private final Reporter reporter;
   private final ExceptionReporter exceptionReporter;
@@ -140,6 +134,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
     this.reduceId = reduceId;
     this.jobConf = jobConf;
     this.exceptionReporter = exceptionReporter;
+    this.mergePhase = mergePhase;
 
     this.reporter = reporter;
     this.codec = codec;
@@ -173,8 +168,6 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
       MRJobConfig.REDUCE_MEMORY_TOTAL_BYTES,
       Runtime.getRuntime().maxMemory()) * maxInMemCopyUse);
 
-    this.ioSortFactor = jobConf.getInt(MRJobConfig.IO_SORT_FACTOR, 100);
-
     final float singleShuffleMemoryLimitPercent =
       jobConf.getFloat(MRJobConfig.SHUFFLE_MEMORY_LIMIT_PERCENT,
         DEFAULT_SHUFFLE_MEMORY_LIMIT_PERCENT);
@@ -187,36 +180,16 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
 
     usedMemory = 0L;
     commitMemory = 0L;
-    long maxSingleShuffleLimitConfiged =
-      (long)(memoryLimit * singleShuffleMemoryLimitPercent);
-    if (maxSingleShuffleLimitConfiged > Integer.MAX_VALUE) {
-      maxSingleShuffleLimitConfiged = Integer.MAX_VALUE;
-      LOG.info("The max number of bytes for a single in-memory shuffle cannot"
-        + " be larger than Integer.MAX_VALUE. Setting it to Integer.MAX_VALUE");
-    }
-    this.maxSingleShuffleLimit = maxSingleShuffleLimitConfiged;
-    this.memToMemMergeOutputsThreshold =
-      jobConf.getInt(MRJobConfig.REDUCE_MEMTOMEM_THRESHOLD, ioSortFactor);
+
     this.mergeThreshold = (long)(this.memoryLimit
       * jobConf.getFloat(
         MRJobConfig.SHUFFLE_MERGE_PERCENT,
         MRJobConfig.DEFAULT_SHUFFLE_MERGE_PERCENT));
     LOG.info("MergerManager: memoryLimit=" + memoryLimit + ", "
-      + "maxSingleShuffleLimit=" + maxSingleShuffleLimit + ", "
-      + "mergeThreshold=" + mergeThreshold + ", "
-      + "ioSortFactor=" + ioSortFactor + ", "
-      + "memToMemMergeOutputsThreshold=" + memToMemMergeOutputsThreshold);
-
-    if (this.maxSingleShuffleLimit >= this.mergeThreshold) {
-      throw new RuntimeException("Invalid configuration: "
-        + "maxSingleShuffleLimit should be less than mergeThreshold "
-        + "maxSingleShuffleLimit: " + this.maxSingleShuffleLimit
-        + "mergeThreshold: " + this.mergeThreshold);
-    }
+      + "mergeThreshold=" + mergeThreshold);
 
     this.inMemoryMerger = createRssInMemoryMerger();
     this.inMemoryMerger.start();
-    this.mergePhase = mergePhase;
   }
 
 
@@ -237,6 +210,11 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
       reduceCombineInputCounter,
       mergedMapOutputsCounter
     );
+  }
+
+  @Override
+  public void waitForResource() throws InterruptedException {
+    inMemoryMerger.waitForMerge();
   }
 
   @Override
@@ -261,6 +239,11 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
   }
 
   @Override
+  synchronized void unreserve(long size) {
+    usedMemory -= size;
+  }
+
+  @Override
   public synchronized void closeInMemoryFile(InMemoryMapOutput<K,V> mapOutput) {
 
     inMemoryMapOutputs.add(mapOutput);
@@ -268,7 +251,7 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
       + ", inMemoryMapOutputs.size() -> " + inMemoryMapOutputs.size()
       + ", commitMemory -> " + commitMemory + ", usedMemory ->" + usedMemory);
 
-    commitMemory+= mapOutput.getSize();
+    commitMemory += mapOutput.getSize();
     // Can hang if mergeThreshold is really low.
     if (commitMemory >= mergeThreshold) {
       LOG.info("Starting inMemoryMerger's merge since commitMemory="
@@ -283,6 +266,16 @@ public class RssRemoteMergeManagerImpl<K, V> extends MergeManagerImpl<K, V> {
 
   public synchronized void closeOnHDFSFile(Path file) {
     onHDFSMapOutputs.add(file);
+  }
+
+  @Override
+  public synchronized void closeInMemoryMergedFile(InMemoryMapOutput<K,V> mapOutput) {
+    throw new IllegalStateException("closeInMemoryMergedFile is unsupported for rss merger");
+  }
+
+  @Override
+  public synchronized void closeOnDiskFile(CompressAwarePath file) {
+    throw new IllegalStateException("closeOnDiskFile is unsupported for rss merger");
   }
 
     @Override
